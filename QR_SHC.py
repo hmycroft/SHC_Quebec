@@ -27,10 +27,8 @@ iFileName = sys.argv[1]
 console = Console(style="green on black", highlight=False)
 
 images = convert_from_path(iFileName)
-assert(len(images) == 1) # There is only one page in all the vaccination proofs I have seen
-pilImage = images[0]
+pilImage = images[0] # QR is on the first page
 decodedQR = pyzbar.decode(numpy.array(pilImage))
-assert(len(decodedQR) == 1) # One page, one QR code...
 qr = decodedQR[0].data
 console.print()
 console.rule("[red]INFO CONTENUE DANS LE CODE QR", align="center", style="red", characters="\u2584")
