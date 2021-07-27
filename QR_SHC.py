@@ -60,7 +60,11 @@ console.print(f"algorithm: [white on black]{header['alg']}")
 
 
 # Validate and print the payload
-decompressed_payload = eval(zlib.decompress(payload, -15))
+decompressed_payload = zlib.decompress(payload, -zlib.MAX_WBITS)
+# some cleanup in entry for Python eval (the format is close enough to Python, but not quite 100%)
+decompressed_payload = decompressed_payload.replace(b"false", b"False")
+decompressed_payload = decompressed_payload.replace(b"true", b"True")
+decompressed_payload = eval(decompressed_payload)
 assert("iss" in decompressed_payload and "iat" in decompressed_payload and "vc" in decompressed_payload)
 console.print()
 console.rule("[red]PAYLOAD DÉCODÉ", align="center", style="red", characters="\u2584")
