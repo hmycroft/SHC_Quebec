@@ -1,10 +1,8 @@
 import base64
-import numpy
 import os
 import sys
 from pdf2image import convert_from_path
 from pyzbar import pyzbar
-from rich import print
 from rich.console import Console
 import zlib
 
@@ -27,8 +25,8 @@ iFileName = sys.argv[1]
 console = Console(style="green on black", highlight=False)
 
 images = convert_from_path(iFileName)
-pilImage = images[0] # QR is on the first page
-decodedQR = pyzbar.decode(numpy.array(pilImage))
+pilImage = images[0] # QR is on the first page, not handling multiple QRs in this proof of concept
+decodedQR = pyzbar.decode(pilImage)
 qr = decodedQR[0].data
 console.print()
 console.rule("[red]INFO CONTENUE DANS LE CODE QR", align="center", style="red", characters="\u2584")
@@ -45,10 +43,10 @@ console.print()
 console.rule("[red]INFOS DÉCODÉES DU CODE QR ([bright_cyan on black]header[/] [blue on black]payload[/] [magenta on black]signature[/])", align="center", style="red", characters="\u2584")
 console.print(f"[bright_cyan on black]{rawHeader}[/].[blue on black]{rawPayload}[/].[magenta on black]{rawSignature}")
 
-
 header = eval(base64.urlsafe_b64decode(rawHeader.ljust(len(rawHeader)+len(rawHeader)%4, "=")))
 payload = base64.urlsafe_b64decode(rawPayload.ljust(len(rawPayload)+len(rawPayload)%4, "="))
 signature = base64.urlsafe_b64decode(rawSignature.ljust(len(rawSignature)+len(rawSignature)%4, "="))
+
 
 # Validate and print the header
 assert("kid" in header and "zip" in header and "alg" in header)
@@ -111,8 +109,26 @@ console.print(f"[white on black]{signature.hex()}")
 
 
 
-# If and when they make the public key available at https://covid19.quebec.ca/PreuveVaccinaleApi/issuer/.well-known/jwks.json
-# import jose
-# publicKey = "INSERT PUBLIC KEY HERE"
-# jose.jws.verify(buff, publicKey, algorithms="ES256")
+# Public key is finally available at https://covid19.quebec.ca/PreuveVaccinaleApi/issuer/.well-known/jwks.json
+
+# To turn off the deprecated warnings in jose
+import warnings 
+from cryptography.utils import CryptographyDeprecationWarning
+warnings.filterwarnings("ignore", category=CryptographyDeprecationWarning)
+from jose import jwk
+
+hmacKey = {"kty":"EC","kid":"qFdl0tDZK9JAWP6g9_cAv57c3KWxMKwvxCrRVSzcxvM","use":"sig","alg":"ES256","crv":"P-256","x":"XSxuwW_VI_s6lAw6LAlL8N7REGzQd_zXeIVDHP_j_Do","y":"88-aI4WAEl4YmUpew40a9vq_w5OcFvsuaKMxJRLRLL0"}
+key = jwk.construct(hmacKey)
+if key.verify(f"{rawHeader}.{rawPayload}".encode(), signature) == True:
+    console.rule("", characters="\u2584", style="bold green")
+    console.rule("[bold green]SIGNATURE DU GOUVERNEMENT DU QUÉBEC VALIDE", characters="\u2584", style="bold green")
+    console.rule("", characters="\u2584", style="bold green")
+else:
+    console.rule("", characters="\u2584", style="red")
+    console.rule("[red]SIGNATURE INVALIDE!!!", characters="\u2584", style="red")
+    console.rule("", characters="\u2584", style="red")
+
+
+
+
 
